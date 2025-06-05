@@ -15,7 +15,8 @@ if [[ "$OS_VERSION" == "24.04" ]]; then
     echo "🚀 Ubuntu 24.04 detected. Installing/upgrading to Python 3.12 (default)."
     
     sudo apt update -y
-    sudo apt install -y python3 python3-pip python3-venv python3-distutils
+    #sudo apt install -y python3 python3-pip python3-venv python3-distutils   (excluding python3-venv python3-distutils)
+    sudo apt install -y python3 python3-pip 
 else
     echo "📦 Ubuntu $OS_VERSION detected. Installing latest supported version (via Deadsnakes)."
 
