@@ -125,3 +125,18 @@ if [ "$RUN_INSTALL" -eq 1 ]; then
     chmod +x "$ANSIBLE_SCRIPT"
     ./"$ANSIBLE_SCRIPT"
 fi
+
+
+echo "Cleaning up........"
+
+rm -rf "$DOCKER_SCRIPT"
+echo "Removed $DOCKER_SCRIPT from $PWD"
+
+rm -rf "$PYTHON_INSTALL_SCRIPT"
+echo "Removed $PYTHON_INSTALL_SCRIPT from $PWD"
+
+rm -rf "$ANSIBLE_SCRIPT"
+echo "Removed $ANSIBLE_SCRIPT from $PWD"
+
+rm -rf package-installation.sh
+
