@@ -12,10 +12,14 @@ echo "-----------------------------------"
 
 echo "🔍 Checking system requirements..."
 
-# ****************** DOCKER *********************
-# Step 1: Checking Docker 
-echo " First Step: Checking Docker..."
+LOG_FILE="installation_log_$(date +%F).txt"
+if [ -f "$LOG_FILE" ]; then
+    rm -f "$LOG_FILE"
+else
+    touch "$LOG_FILE"
+fi 
 
+echo " ****************** DOCKER *********************"
 # Check whether Docker is installed
 # -----------------------------------
 # ✅ DOCKER INSTALL/UPGRADE LOGIC
@@ -26,30 +30,45 @@ DOCKER_SCRIPT="docker-install.sh"
 DOCKER_SCRIPT_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/docker-install.sh"  # Replace
 
 if command -v docker &> /dev/null; then
-    echo "🔁 Docker is already installed: $(docker --version)"
-    echo "🔁 Running Docker install script to ensure it's the latest version..."
+    DOCKER_VERSION="$(docker --version | awk '{print $3}' | sed 's/,//')"
+    MIN_DOCKER_VERSION="24.0.5"
+    RUN_INSTALL=0
+
+    if dpkg --compare-versions "$DOCKER_VERSION" ge "$MIN_DOCKER_VERSION"; then
+        echo "✅ Docker version ($DOCKER_VERSION) is greater than minimum required ($MIN_DOCKER_VERSION)."
+    else
+        echo "❌ Minimum Docker version ($MIN_DOCKER_VERSION) is greater or equal to current version ($DOCKER_VERSION). Running upgrade..."
+        RUN_INSTALL=1
+    fi
 else
-    echo "❌ Docker is not installed. Installing..."
+    echo "❌ Docker is not installed. Installing Docker ..."
+    RUN_INSTALL=1
 fi
 
-# Download script if not present
-if [ ! -f "./$DOCKER_SCRIPT" ]; then
-    echo "🌐 Downloading $DOCKER_SCRIPT..."
-    curl -fsSL -o "$DOCKER_SCRIPT" "$DOCKER_SCRIPT_URL"
+if [ "$RUN_INSTALL" -eq 1 ]; then
+    if [ -f "./$DOCKER_SCRIPT" ]; then
+        echo "📂 $DOCKER_SCRIPT already exists. Skipping download. Installing Docker... ⏳"
+    else
+        echo "🌐 Downloading $DOCKER_SCRIPT..."
+        echo " $DOCKER_SCRIPT downloaded, Installing Docker... ⏳"
+        curl -fsSL -o "$DOCKER_SCRIPT" "$DOCKER_SCRIPT_URL"
+    fi
+
+    chmod +x "$DOCKER_SCRIPT"
+    ./"$DOCKER_SCRIPT" >> $PWD/$LOG_FILE
+
+    sleep 5
+    if command -v docker &> /dev/null; then
+        echo " Docker is installed !!, Removing the installation file from server."
+        rm -rf "$DOCKER_SCRIPT" &> /dev/null
+    else
+        echo " Docker installation failed !! Check the Installation log file $PWD/$LOG_FILE ."
+    fi
 fi
-
-chmod +x "$DOCKER_SCRIPT"
-./"$DOCKER_SCRIPT"
-
 
 #End Of Docker checking
 
-
-# ****************** Python Installation *********************
-# Step 1: Checking Python 
-echo " Second Step: Checking Python..."
-
-
+echo " ****************** Python Installation *********************"
 # Check whether Python is installed
 # -----------------------------------
 # ✅ PYTHON INSTALL/UPGRADE LOGIC
@@ -57,35 +76,50 @@ echo " Second Step: Checking Python..."
 echo "🔍 Checking Python installation..."
 
 PYTHON_INSTALL_SCRIPT="python-install.sh"
-PYTHON_DOWNLOAD_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/python-install.sh"  # Replace with your URL
+PYTHON_DOWNLOAD_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/python-install.sh" 
 
 if command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
-    echo "🔍 Current Python version: $PYTHON_VERSION"
-
-    # Always upgrade to latest
-    echo "🔁 Python is installed but may not be latest. Running upgrade script..."
+    MIN_PYTHON_VERSION="3.11"
+    RUN_INSTALL=0
+    # Compare version strings using sort -V
+    if [ "$(printf '%s\n' "$MIN_PYTHON_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" = "$MIN_PYTHON_VERSION" ] && [ "$PYTHON_VERSION" != "$MIN_PYTHON_VERSION" ]; then
+        echo "✅ Python version ($PYTHON_VERSION) is greater than minimum required ($MIN_PYTHON_VERSION)."
+    else
+        echo "❌ Minimum Python version ($MIN_PYTHON_VERSION) is greater or equal to current version ($PYTHON_VERSION). Running upgrade..."
+         RUN_INSTALL=1
+    fi
 else
-    echo "❌ Python is not installed. Running install script..."
+    echo "❌ Python not found on system. Running install script..."
+    RUN_INSTALL=1
 fi
 
-# 🧠 If file not present, download
-if [ ! -f "./$PYTHON_INSTALL_SCRIPT" ]; then
-    echo "🌐 Downloading $PYTHON_INSTALL_SCRIPT..."
-    curl -fsSL -o "$PYTHON_INSTALL_SCRIPT" "$PYTHON_DOWNLOAD_URL"
+if [ "$RUN_INSTALL" -eq 1 ]; then
+    if [ -f "./$PYTHON_INSTALL_SCRIPT" ]; then
+        echo "📂 $PYTHON_INSTALL_SCRIPT already exists. Skipping download. Installing Python... ⏳"
+    else
+        echo "🌐 Downloading $PYTHON_INSTALL_SCRIPT..."
+        echo " $PYTHON_INSTALL_SCRIPT downloaded, Installing Python... ⏳"
+        curl -fsSL -o "$PYTHON_INSTALL_SCRIPT" "$PYTHON_DOWNLOAD_URL"
+    fi
+
+    chmod +x "$PYTHON_INSTALL_SCRIPT"
+    ./"$PYTHON_INSTALL_SCRIPT" >> $PWD/$LOG_FILE
+
+    sleep 5
+
+    if command -v python3 &> /dev/null; then
+        echo " Python is installed !!, Removing the installation file from server"
+        rm -rf "$PYTHON_INSTALL_SCRIPT" &> /dev/null
+    else
+        echo " Python installation failed !! Check the Installation log file under $PWD"
+    fi
+
 fi
 
-# ✅ Run the script regardless of Python status
-chmod +x "$PYTHON_INSTALL_SCRIPT"
-./"$PYTHON_INSTALL_SCRIPT"
+#End Of Python checking
 
-#End Of Pythin checking
-
-# ****************** Ansible Installation *********************
-# Step 1: Checking Ansible 
-echo " Last Step: Checking Ansible..."
-
-
+echo "  ****************** Ansible Installation *********************"
 # Check whether Ansible is installed
 # -----------------------------------
 # ✅ ANSIBLE INSTALL/UPGRADE LOGIC
@@ -94,23 +128,19 @@ echo " Last Step: Checking Ansible..."
 echo "🔍 Checking Ansible installation..."
 
 ANSIBLE_SCRIPT="ansible-install.sh"
-ANSIBLE_SCRIPT_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/ansible-install.sh"  # Replace
+ANSIBLE_SCRIPT_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/ansible-install.sh"
 MIN_ANSIBLE_VERSION="2.15"
 
 if command -v ansible &> /dev/null; then
-    INSTALLED_VERSION=$(ansible --version | head -n1 | awk '{print $2}')
-    echo "✅ Ansible version $INSTALLED_VERSION is installed."
-
-    LOWEST_VERSION=$(printf '%s\n' "$MIN_ANSIBLE_VERSION" "$INSTALLED_VERSION" | sort -V | head -n1)
-    if [ "$LOWEST_VERSION" != "$MIN_ANSIBLE_VERSION" ]; then
-        echo "⚠️ Ansible version is below $MIN_ANSIBLE_VERSION, upgrading..."
-        RUN_INSTALL=1
+    ANSIBLE_VERSION=$(ansible --version | head -n1 | awk '{print $3}'| sed 's/]//')
+    if [ "$(printf '%s\n' "$MIN_ANSIBLE_VERSION" "$ANSIBLE_VERSION" | sort -V | head -n1)" = "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "$MIN_ANSIBLE_VERSION" ]; then
+        echo "✅ Ansible version ($INSTALLED_VERSION) is greater than minimum required ($MIN_ANSIBLE_VERSION)."
     else
-        echo "✅ Ansible version meets minimum requirement. Skipping install."
-        RUN_INSTALL=0
+        echo "❌ Minimum Ansible version ($MIN_ANSIBLE_VERSION) is greater or equal to current version ($ANSIBLE_VERSION). Running upgrade..."
+         RUN_INSTALL=1
     fi
 else
-    echo "❌ Ansible is not installed. Installing..."
+    echo "❌ Ansible not found on system. Running install script..."
     RUN_INSTALL=1
 fi
 
@@ -123,5 +153,15 @@ if [ "$RUN_INSTALL" -eq 1 ]; then
     fi
 
     chmod +x "$ANSIBLE_SCRIPT"
-    ./"$ANSIBLE_SCRIPT"
+    ./"$ANSIBLE_SCRIPT" >> $PWD/$LOG_FILE
+
+    sleep 5
+
+    if command -v ansible &> /dev/null; then
+        echo " Ansible is installed !!, Removing the installation file from server."
+        rm -rf "$ANSIBLE_SCRIPT" &> /dev/null
+    else
+        echo " Ansible installation failed !! Check the Installation log file $PWD/$LOG_FILE ."
+    fi
 fi
+#End Of Ansible checking
