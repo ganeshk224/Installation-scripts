@@ -129,16 +129,18 @@ echo "🔍 Checking Ansible installation..."
 
 ANSIBLE_SCRIPT="ansible-install.sh"
 ANSIBLE_SCRIPT_URL="https://raw.githubusercontent.com/ganeshk224/Installation-scripts/master/ansible-install.sh"
-MIN_ANSIBLE_VERSION="2.15"
 
 if command -v ansible &> /dev/null; then
     ANSIBLE_VERSION=$(ansible --version | head -n1 | awk '{print $3}'| sed 's/]//')
-    if [ "$(printf '%s\n' "$MIN_ANSIBLE_VERSION" "$ANSIBLE_VERSION" | sort -V | head -n1)" = "$INSTALLED_VERSION" ] && [ "$INSTALLED_VERSION" != "$MIN_ANSIBLE_VERSION" ]; then
-        echo "✅ Ansible version ($INSTALLED_VERSION) is greater than minimum required ($MIN_ANSIBLE_VERSION)."
+    RUN_INSTALL=0
+    MIN_ANSIBLE_VERSION="2.15"
+    if [ "$(printf '%s\n' "$MIN_ANSIBLE_VERSION" "$ANSIBLE_VERSION" | sort -V | head -n1)" = "$MIN_ANSIBLE_VERSION" ] && [ "$ANSIBLE_VERSION" != "$MIN_ANSIBLE_VERSION" ]; then
+        echo "✅ Ansible version ($ANSIBLE_VERSION) is greater than minimum required ($MIN_ANSIBLE_VERSION)."
     else
         echo "❌ Minimum Ansible version ($MIN_ANSIBLE_VERSION) is greater or equal to current version ($ANSIBLE_VERSION). Running upgrade..."
          RUN_INSTALL=1
     fi
+
 else
     echo "❌ Ansible not found on system. Running install script..."
     RUN_INSTALL=1
